@@ -1,0 +1,3 @@
+https://sysdig.com/blog/kubernetes-pod-pending-problems/
+
+
