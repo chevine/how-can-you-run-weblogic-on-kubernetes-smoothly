@@ -59,24 +59,17 @@ sudo ./aws/install
 cp -rp /vagrant/manifests .
 cp -rp /vagrant/model-in-image .
 
-exit 0
-
-
-# Configure the environment for the AWS CLI
-# AWS Access Key ID [None]: AKIA42B43KUUDQ2CPTGA
-# AWS Secret Access Key [None]: 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
-# Default region name [None]: us-west-2
-# Default output format [None]: json
-aws configure
-
-
 # Use "Model in Image" to install a WebLogic Operator
 # https://oracle.github.io/weblogic-kubernetes-operator/samples/domains/model-in-image/
 
+# Retrieve the WebLogic Server container images
+mkdir -p ~/.tmp
+chmod -R og-rwx ~/.tmp
+echo "Lucinda11#" > ~/.tmp/.passwd.txt
+cat ~/.tmp/.passwd.txt | docker login container-registry-frankfurt.oracle.com --username chevine@verizon.net --password-stdin
 docker login container-registry-frankfurt.oracle.com
 docker pull container-registry-frankfurt.oracle.com/middleware/weblogic:14.1.1.0-11
 docker logout container-registry-frankfurt.oracle.com
-kubectl apply -f manifests/ingress-nginx.yaml
 
 # Install Ingress Nginx Controller
 kubectl apply -f manifests/ingress-nginx.yaml
@@ -95,15 +88,29 @@ helm install cloud-coaching-weblogic-operator weblogic-operator/weblogic-operato
   --set "domainNamespaceLabelSelector=cloud-coaching-weblogic-operator\=enabled" \
   --wait
 kubectl get pods -n cloud-coaching-weblogic-operator-ns
-cd model-in-image/model-images
-curl -m 120 -fL https://github.com/oracle/weblogic-deploy-tooling/releases/latest/download/weblogic-deploy.zip -o ./weblogic-deploy.zip
-./imagetool/bin/imagetool.sh cache deleteEntry --key wdt_latest
-./imagetool/bin/imagetool.sh cache addInstaller --type wdt --version latest --path ./weblogic-deploy.zip
-cd ../archives/archive-v1/
-zip -r ../../model-images/playground-model/archive.zip wlsdeploy
+helm list -n cloud-coaching-weblogic-operator-ns
 
 # Build Image With Domain Model
+cd model-in-image/model-images
+# Dowload weblogic-deploy and the Image Tool
+curl -m 120 -fL https://github.com/oracle/weblogic-deploy-tooling/releases/latest/download/weblogic-deploy.zip -o ./weblogic-deploy.zip
+curl -m 120 -fL https://github.com/oracle/weblogic-image-tool/releases/latest/download/imagetool.zip -o ./imagetool.zip
+unzip imagetool.zip
+# Clear the cache
+./imagetool/bin/imagetool.sh cache deleteEntry --key wdt_latest
+# Install WIT and reference WDT
+./imagetool/bin/imagetool.sh cache addInstaller --type wdt --version latest --path ./weblogic-deploy.zip
+if [ $? -ne 0 ]
+then
+   echo "FATAL ERROR: Was not able to execute the following command:\n\t./imagetool/bin/imagetool.sh cache addInstaller --type wdt --version latest --path ./weblogic-deploy.zip"
+   exit 888
+fi
+# Go in folder with WAR source
+cd ../archives/archive-v1/
+zip -r ../../model-images/playground-model/archive.zip wlsdeploy
+# Go in the folder with model images
 cd ../../model-images
+# Build the image with inputs
 ./imagetool/bin/imagetool.sh update \
 --tag cloud-coaching-demo-app:1.0 \
 --fromImage container-registry-frankfurt.oracle.com/middleware/weblogic:14.1.1.0-11 \
@@ -113,13 +120,25 @@ cd ../../model-images
 --wdtModelOnly \
 --wdtDomainType WLS \
 --chown oracle:root
+# Confirmed the existence of a freshly generated container image with the domain inside
+docker images | grep cloud-coaching-demo-app
 
-aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 880595916072.dkr.ecr.us-west-2.amazonaws.com
+
+exit 0
+# Tag the image and push it to the repository
+aws --profile rasadmin-dev configure
+aws ecr get-login-password --region us-west-2 | docker login --username rasadmin-dev --password-stdin 880595916072.dkr.ecr.us-west-2.amazonaws.com
 docker tag cloud-coaching-demo-app:1.0 880595916072.dkr.ecr.us-west-2.amazonaws.com/cloud-coaching-demo-app:1.0
 docker push 880595916072.dkr.ecr.us-west-2.amazonaws.com/cloud-coaching-demo-app:1.0
 
-# Deploy WebLogic Domain to Kubernetes with Operator
+# Install the Oracle instance
+docker pull container-registry.oracle.com/database/enterprise:latest
+docker run -d --name RASDEV container-registry.oracle.com/database/enterprise:21.3.0.0
+docker logs RASDEV
+docker exec -it <container-id> bash
+docker exec RASDEV ./setPassword.sh Lucinda11
+docker exec -it RASDEV sqlplus / as sysdba
 
 
-
-
+docker exec -it RASDEV sqlplus sys/Lucinda11@ORCLCDB as sysdba
+docker exec -it RASDEV sqlplus system/Lucinda11@ORCLCDB
