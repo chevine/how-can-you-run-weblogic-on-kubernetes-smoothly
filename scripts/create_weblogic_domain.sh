@@ -8,6 +8,7 @@ chmod ~/.bashrc
 # Ensure that is secure /home/vagrant/.kube/config
 chmod og-rwx /home/vagrant/.kube/config
 
+
 # Install Helm
 # https://v3.helm.sh/docs/intro/install/
 wget https://get.helm.sh/helm-v3.12.0-linux-amd64.tar.gz 
