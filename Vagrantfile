@@ -1,3 +1,4 @@
+# new_ip=$(vagrant ssh -c "ip address show eth0 | grep 'inet ' | sed -e 's/^.*inet //' -e 's/\/.*$//'")
 
 require "yaml"
 settings = YAML.load_file "settings.yaml"
@@ -17,6 +18,7 @@ Vagrant.configure("2") do |config|
         echo "$IP_NW$((IP_START+i)) worker-node0${i}" >> /etc/hosts
       done
       echo "$IP_NW$((IP_START+10)) ansible-node" >> /etc/hosts
+      echo "$IP_NW$((IP_START+20)) oracle-node" >> /etc/hosts
   SHELL
 
   if `uname -m`.strip == "aarch64"
@@ -96,26 +98,48 @@ Vagrant.configure("2") do |config|
     end
   end
 
-#  config.vm.define "ansible" do |ansible|
-#    ansible.vm.hostname = "ansible-node"
-#    ansible.vm.network "private_network", ip: settings["network"]["ansible_ip"]
-#    if settings["shared_folders"]
-#      settings["shared_folders"].each do |shared_folder|
-#        ansible.vm.synced_folder shared_folder["host_path"], shared_folder["vm_path"]
-#      end
-#    end
-#    ansible.vm.provider "virtualbox" do |vb|
-#        vb.cpus = settings["nodes"]["ansible"]["cpu"]
-#        vb.memory = settings["nodes"]["ansible"]["memory"]
-#        vb.gui = true
-#    end
-#    ansible.vm.provision "shell",
-#      env: {
-#        "DNS_SERVERS" => settings["network"]["dns_servers"].join(" "),
-#        "ENVIRONMENT" => settings["environment"],
-#        "OS" => settings["software"]["os"]
-#      },
-#      path: "scripts/configure_ansible_host.sh"
-#  end
+  config.vm.define "oracle" do |oracle|
+    oracle.vm.hostname = "oracle-node"
+    oracle.vm.network "public_network", ip: settings["network"]["oracle_ip"]
+    if settings["shared_folders"]
+      settings["shared_folders"].each do |shared_folder|
+      oracle.vm.synced_folder shared_folder["host_path"], shared_folder["vm_path"]
+      end
+    end
+    oracle.vm.provider "virtualbox" do |vb|
+        vb.cpus = settings["nodes"]["oracle"]["cpu"]
+        vb.memory = settings["nodes"]["oracle"]["memory"]
+        vb.gui = true
+    end
+    oracle.vm.provision "shell",
+      env: {
+        "DNS_SERVERS" => settings["network"]["dns_servers"].join(" "),
+        "ENVIRONMENT" => settings["environment"],
+        "OS" => settings["software"]["os"]
+      },
+      path: "scripts/create_oracle_instance.sh"
+  end
+
+  config.vm.define "ansible" do |ansible|
+    ansible.vm.hostname = "ansible-node"
+    ansible.vm.network "public_network", ip: settings["network"]["ansible_ip"]
+    if settings["shared_folders"]
+      settings["shared_folders"].each do |shared_folder|
+        ansible.vm.synced_folder shared_folder["host_path"], shared_folder["vm_path"]
+      end
+    end
+    ansible.vm.provider "virtualbox" do |vb|
+        vb.cpus = settings["nodes"]["ansible"]["cpu"]
+        vb.memory = settings["nodes"]["ansible"]["memory"]
+        vb.gui = true
+    end
+    ansible.vm.provision "shell",
+      env: {
+        "DNS_SERVERS" => settings["network"]["dns_servers"].join(" "),
+        "ENVIRONMENT" => settings["environment"],
+        "OS" => settings["software"]["os"]
+      },
+      path: "scripts/configure_ansible_host.sh"
+  end
 
 end 

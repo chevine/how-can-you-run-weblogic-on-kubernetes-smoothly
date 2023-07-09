@@ -90,6 +90,8 @@ helm install cloud-coaching-weblogic-operator weblogic-operator/weblogic-operato
   --wait
 kubectl get pods -n cloud-coaching-weblogic-operator-ns
 helm list -n cloud-coaching-weblogic-operator-ns
+helm history cloud-coaching-weblogic-operator -n cloud-coaching-weblogic-operator-ns
+# helm uninstall cloud-coaching-weblogic-operator -n cloud-coaching-weblogic-operator-ns
 
 # Build Image With Domain Model
 cd model-in-image/model-images

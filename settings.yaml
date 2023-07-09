@@ -11,6 +11,7 @@ network:
   # Worker IPs are simply incremented from the control IP.
   control_ip: 10.0.0.10
   ansible_ip: 10.0.1.10
+  oracle_ip: 10.0.2.10
   dns_servers:
   - 8.8.8.8
   - 1.1.1.1
@@ -27,6 +28,9 @@ nodes:
   ansible:
     cpu: 2
     memory: 2048
+  oracle:
+    cpu: 2
+    memory: 4096
 # Mount additional shared folders from the host into each virtual machine.
 # Note that the project directory is automatically mounted at /vagrant.
 # shared_folders:

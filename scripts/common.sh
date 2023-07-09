@@ -4,6 +4,8 @@
 
 set -euxo pipefail
 
+sudo apt install ncal -y
+
 # Variable Declaration
 
 # DNS Setting
